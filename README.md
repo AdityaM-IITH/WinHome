@@ -26,7 +26,7 @@ powered by modern, dependency-free, single-file .NET.
 ## 💬 Community & Support
 
 *   **GitHub Discussions:** The best place for "How do I...?" questions and community support. **[Join the conversation!](https://github.com/DotDev262/WinHome/discussions)**
-*   **Issues:** For bug reports and feature requests. Please check existing issues before opening a new one.
+*   **Issues:** For bug reports and feature requests. **[Open a new issue using our templates.](https://github.com/DotDev262/WinHome/issues/new/choose)**
 *   **GSSOC 2026:** Participants should check our **[Contributing Guide](./CONTRIBUTING.md)** for program-specific instructions.
 
 ---
