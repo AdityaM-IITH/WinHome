@@ -2,6 +2,7 @@ import sys
 import json
 import os
 import shutil
+from pathlib import Path
 
 MARKER_START = "# --- WinHome managed start ---"
 MARKER_END = "# --- WinHome managed end ---"
@@ -11,30 +12,30 @@ def log(msg):
     sys.stderr.flush()
 
 def get_profile_paths():
-    user_profile = os.getenv("USERPROFILE")
-    if not user_profile:
-        raise Exception("USERPROFILE environment variable not found")
-
     paths = []
     
-    # PowerShell 7
-    ps7_dir = os.path.join(user_profile, "Documents", "PowerShell")
-    ps7_path = os.path.join(ps7_dir, "Microsoft.PowerShell_profile.ps1")
-    
-    # Windows PowerShell 5.1
-    ps5_dir = os.path.join(user_profile, "Documents", "WindowsPowerShell")
-    ps5_path = os.path.join(ps5_dir, "Microsoft.PowerShell_profile.ps1")
-    
-    # Add existing ones
-    if os.path.exists(ps7_dir):
-        paths.append(ps7_path)
-    if os.path.exists(ps5_dir):
-        paths.append(ps5_path)
+    user_profile = os.getenv("USERPROFILE")
+    if user_profile:
+        ps7_dir = os.path.join(user_profile, "Documents", "PowerShell")
+        ps5_dir = os.path.join(user_profile, "Documents", "WindowsPowerShell")
         
-    # Default to PS7 if neither exists
-    if not paths:
-        os.makedirs(ps7_dir, exist_ok=True)
-        paths.append(ps7_path)
+        if os.path.exists(ps7_dir):
+            paths.append(os.path.join(ps7_dir, "Microsoft.PowerShell_profile.ps1"))
+        if os.path.exists(ps5_dir):
+            paths.append(os.path.join(ps5_dir, "Microsoft.PowerShell_profile.ps1"))
+            
+        if paths:
+            return paths
+
+    # Fallback via Path.home()
+    if os.name == "nt":
+        fallback_dir = os.path.join(str(Path.home()), "Documents", "PowerShell")
+        os.makedirs(fallback_dir, exist_ok=True)
+        paths.append(os.path.join(fallback_dir, "Microsoft.PowerShell_profile.ps1"))
+    else:
+        fallback_dir = os.path.join(str(Path.home()), ".config", "powershell")
+        os.makedirs(fallback_dir, exist_ok=True)
+        paths.append(os.path.join(fallback_dir, "profile.ps1"))
 
     return paths
 
@@ -62,10 +63,12 @@ def generate_script(settings: dict) -> str:
     aliases = settings.get("aliases", {})
     if aliases:
         for k, v in aliases.items():
+            k_esc = k.replace("'", "''")
+            v_esc = v.replace("'", "''")
             if " " in v:
                 lines.append(f"function {k} {{ {v} @args }}")
             else:
-                lines.append(f"Set-Alias -Name '{k}' -Value '{v}' -Force")
+                lines.append(f"Set-Alias -Name '{k_esc}' -Value '{v_esc}' -Force")
     
     modules = settings.get("modules", {})
     if modules:
@@ -94,7 +97,8 @@ def generate_script(settings: dict) -> str:
         lines.append("Import-Module -Name PSReadLine -ErrorAction SilentlyContinue")
         for k, v in psreadline.items():
             k_camel = "".join(word.capitalize() for word in k.split("_"))
-            lines.append(f"Set-PSReadLineOption -{k_camel} {v}")
+            v_esc = str(v).replace("'", "''")
+            lines.append(f"Set-PSReadLineOption -{k_camel} '{v_esc}'")
 
     functions = settings.get("functions", {})
     if functions:
@@ -106,11 +110,13 @@ def generate_script(settings: dict) -> str:
 
 def write_profile(file_path: str, content: str) -> None:
     os.makedirs(os.path.dirname(file_path), exist_ok=True)
-    with open(file_path, "w", encoding="utf-8") as f:
+    tmp = file_path + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
         f.write(content)
+    os.replace(tmp, file_path)
 
 def check_installed(args: dict, request_id: str) -> dict:
-    installed = shutil.which("pwsh.exe") is not None or shutil.which("powershell.exe") is not None
+    installed = shutil.which("pwsh.exe") is not None or shutil.which("powershell.exe") is not None or shutil.which("pwsh") is not None
     return {
         "requestId": request_id,
         "success": True,

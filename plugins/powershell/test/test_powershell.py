@@ -41,7 +41,7 @@ class TestPowershellPlugin(unittest.TestCase):
         self.assertIn("function ll { ls -Force @args }", script)
         self.assertIn("Invoke-Expression (& zoxide init powershell --cmd z --hook pwd | Out-String)", script)
         self.assertIn("oh-my-posh init powershell --config 'catppuccin'", script)
-        self.assertIn("Set-PSReadLineOption -EditMode Emacs", script)
+        self.assertIn("Set-PSReadLineOption -EditMode 'Emacs'", script)
         self.assertIn("function touch {", script)
         self.assertIn("# --- WinHome managed end ---", script)
 
