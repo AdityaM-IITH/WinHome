@@ -31,7 +31,7 @@ class TestPipPlugin(unittest.TestCase):
         mock_which.return_value = "/usr/bin/pip"
         response = plugin.check_installed({}, "req-1")
         self.assertTrue(response["success"])
-        self.assertTrue(response["data"]["installed"])
+        self.assertTrue(response["data"])
         self.assertEqual(response["requestId"], "req-1")
 
     @patch.object(plugin.shutil, "which")
@@ -39,7 +39,7 @@ class TestPipPlugin(unittest.TestCase):
         mock_which.return_value = None
         response = plugin.check_installed({}, "req-2")
         self.assertTrue(response["success"])
-        self.assertFalse(response["data"]["installed"])
+        self.assertFalse(response["data"])
 
     @patch.object(plugin, "get_pip_ini_path")
     def test_apply_config_creates_new(self, mock_get_path):
@@ -98,6 +98,29 @@ class TestPipPlugin(unittest.TestCase):
         self.assertFalse(response["success"])
         self.assertIn("Failed to parse request", response["error"])
         self.assertEqual(response["requestId"], "unknown")
+
+    @patch.object(plugin, "get_pip_ini_path")
+    def test_apply_config_corrupted_recovery(self, mock_get_path):
+        mock_get_path.return_value = self.pip_ini_path
+        
+        # Create corrupted config
+        os.makedirs(os.path.dirname(self.pip_ini_path), exist_ok=True)
+        with open(self.pip_ini_path, "w", encoding="utf-8") as f:
+            f.write("[global\ninvalid format")
+            
+        args = {"timeout": "100"}
+        response = plugin.apply_config(args, {}, "req-corr")
+        
+        self.assertTrue(response["success"])
+        self.assertTrue(response["changed"])
+        
+        # Verify it backed up the file
+        self.assertTrue(os.path.exists(self.pip_ini_path + ".bak"))
+        
+        # Verify new config
+        config = configparser.ConfigParser()
+        config.read(self.pip_ini_path)
+        self.assertEqual(config.get("global", "timeout"), "100")
 
 if __name__ == "__main__":
     unittest.main()

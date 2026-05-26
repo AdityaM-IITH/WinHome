@@ -21,7 +21,7 @@ def check_installed(args, request_id):
         "requestId": request_id,
         "success": True,
         "changed": False,
-        "data": {"installed": installed},
+        "data": installed,
     }
 
 def apply_config(args, context, request_id):
@@ -35,7 +35,12 @@ def apply_config(args, context, request_id):
         config.optionxform = str
 
         if os.path.exists(pip_ini_path):
-            config.read(pip_ini_path, encoding="utf-8")
+            try:
+                config.read(pip_ini_path, encoding="utf-8")
+            except configparser.Error as e:
+                log(f"Warning: Failed to parse existing config ({e}). Backing up and starting fresh.")
+                shutil.copy2(pip_ini_path, pip_ini_path + ".bak")
+                # Start fresh with empty config
         
         if not config.has_section("global"):
             config.add_section("global")
