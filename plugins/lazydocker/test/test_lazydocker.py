@@ -3,7 +3,6 @@ import json
 import os
 import shutil
 import tempfile
-import time
 from unittest.mock import patch, MagicMock
 from io import StringIO
 import sys

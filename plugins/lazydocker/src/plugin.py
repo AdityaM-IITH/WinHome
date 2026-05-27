@@ -9,7 +9,7 @@ import os
 import sys
 import json
 import shutil
-import time
+import tempfile
 import copy
 import uuid
 
@@ -106,11 +106,17 @@ def apply_config(args, context, request_id):
             if not os.path.exists(config_dir):
                 os.makedirs(config_dir, mode=0o700, exist_ok=True)
                 
-            temp_path = config_path + ".tmp"
-            with open(temp_path, "w", encoding="utf-8") as f:
-                # Use default_flow_style=False for block style
-                yaml.dump(merged_config, f, default_flow_style=False, sort_keys=False)
-            os.replace(temp_path, config_path)
+            fd, temp_path = tempfile.mkstemp(
+                prefix="lazydocker-", suffix=".tmp",
+                dir=os.path.dirname(config_path)
+            )
+            try:
+                with os.fdopen(fd, "w", encoding="utf-8") as f:
+                    yaml.dump(merged_config, f, default_flow_style=False, sort_keys=False)
+                os.replace(temp_path, config_path)
+            except BaseException:
+                os.unlink(temp_path)
+                raise
             sys.stderr.write(f"[lazydocker-plugin] Updated config at {config_path}\n")
         except Exception as e:
             return {
