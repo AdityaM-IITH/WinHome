@@ -35,7 +35,7 @@ def test_check_installed():
     )
     assert res["requestId"] == "1"
     assert res["success"] is True
-    assert "installed" in res["data"]
+    assert isinstance(res["data"], bool)
 
 def test_apply_config_dry_run():
     with tempfile.TemporaryDirectory() as temp_dir:

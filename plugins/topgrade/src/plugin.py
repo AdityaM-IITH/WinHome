@@ -105,7 +105,7 @@ def check_installed(args: dict, request_id: str) -> dict:
         "requestId": request_id,
         "success": True,
         "changed": False,
-        "data": {"installed": installed},
+        "data": installed,
     }
 
 def apply_config(args: dict, context: dict, request_id: str) -> dict:
@@ -154,6 +154,13 @@ def apply_config(args: dict, context: dict, request_id: str) -> dict:
 def main():
     input_data = sys.stdin.read()
     if not input_data:
+        sys.stdout.write(json.dumps({
+            "requestId": "unknown",
+            "success": False,
+            "changed": False,
+            "error": "Empty stdin received"
+        }) + "\n")
+        sys.stdout.flush()
         return
 
     try:
